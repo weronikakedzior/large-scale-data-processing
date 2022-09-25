@@ -1,0 +1,126 @@
+version: '3.4'
+x-redash-service: &redash-service
+  image: redash/redash:8.0.0.b32245
+  depends_on:
+    - postgres
+    - redis
+  restart: always
+x-redash-environment: &redash-environment
+  REDASH_LOG_LEVEL: "INFO"
+  REDASH_REDIS_URL: "redis://redis:6379/0"
+  REDASH_COOKIE_SECRET: "random pass"
+  REDASH_SECRET_KEY: "random pass"
+  POSTGRES_PASSWORD: "password"
+  REDASH_DATABASE_URL: "postgresql://postgres:password@postgres/postgres"
+  REDASH_RATELIMIT_ENABLED: "false"
+  REDASH_MAIL_DEFAULT_SENDER: "redash@example.com"
+  REDASH_MAIL_SERVER: "email"
+  REDASH_ENFORCE_CSRF: "true"
+services:
+  server:
+    <<: *redash-service
+    command: server
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "5000:5000"
+      - "5678:5678"
+    environment:
+      <<: *redash-environment
+      PYTHONUNBUFFERED: 0
+  scheduler:
+    <<: *redash-service
+    command: scheduler
+    depends_on:
+      - server
+    environment:
+      <<: *redash-environment
+  worker:
+    <<: *redash-service
+    command: worker
+    depends_on:
+      - server
+    environment:
+      <<: *redash-environment
+      PYTHONUNBUFFERED: 0
+  redis:
+    image: redis:3-alpine
+    restart: unless-stopped
+  postgres:
+    image: postgres:9.5-alpine
+    ports:
+      - "15432:5432"
+    command: "postgres -c fsync=off -c full_page_writes=off -c synchronous_commit=OFF"
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: "trust"
+  nginx:
+    image: redash/nginx:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    links:
+      - server:redash
+    restart: always
+  app_scheduler:
+    build: .
+    image: &img worker
+    command: [celery, worker, --app=worker.app, --beat]
+    environment: &env
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672
+      - CELERY_RESULT_BACKEND=rpc
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+    volumes: &volume
+      - ./app:/app
+  scraping_worker:
+    build: .
+    image: *img
+    container_name: 'scraping-worker'
+    command: [celery, worker, --app=scraper_worker.app, --queues=scraping, --beat]
+    environment: *env
+    depends_on:
+      - rabbitmq
+    volumes: *volume
+  embedding_worker:
+    build: .
+    image: *img
+    container_name: 'embedding-worker'
+    command: [celery, worker, --app=embedding_worker.app, --queues=embedding, --beat]
+    environment: *env
+    depends_on:
+      - rabbitmq
+    volumes: *volume
+  database_worker:
+    build: .
+    image: *img
+    container_name: 'database-worker'
+    command: [celery, worker, --app=database_worker.app, --queues=database, --beat]
+    environment: *env
+    depends_on:
+      - rabbitmq
+      - mongodb
+    volumes: *volume
+    links:
+      - mongodb
+  rabbitmq:
+    image: rabbitmq:3.8
+    environment:
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit log [{console,[{level,warning}]}]
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user
+      MONGO_INITDB_ROOT_PASSWORD: passwd
+      MONGO_INITDB_DATABASE: reddit_database
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
+

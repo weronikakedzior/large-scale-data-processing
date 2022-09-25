@@ -1,0 +1,55 @@
+# Default values for app-lsdp.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+embeddingsWorkerReplicas: 1
+databaseWorkerReplicas: 1
+scrapingWorkersReplicas: 1
+appSchedulerReplicas: 1
+volumeInflux: "/home/ubuntu/project_2/influx_data"
+volumeMongo: "/home/ubuntu/project_2/mongo_data"
+celery_result_backend: "rpc"
+influxdb_host: -influxdb.default.svc.cluster.local
+influxdb_port: 8086
+mongodb_host: mongodb
+mongodb_port: 27017
+rabbitmq:
+  auth:
+    username: guest
+    password: guest
+  service:
+    port: 5672
+
+influxdb:
+  adminUser:
+    name: root
+    pwd: root
+  persistence:
+    existingClaim: influx
+  volumePermissions:
+    enabled: true
+
+grafana:
+  admin:
+    password: admin
+  service:
+    type: NodePort
+
+mongodb:
+  auth:
+    username: user
+    password: passwd
+    database: reddit_database
+  persistence:
+    existingClaim: mongo
+  volumePermissions:
+    enabled: true
+
+redash:
+  redash:
+    cookieSecret: random
+    secretKey: random
+  postgresql:
+    postgresqlPassword: password
+  service:
+    type: NodePort

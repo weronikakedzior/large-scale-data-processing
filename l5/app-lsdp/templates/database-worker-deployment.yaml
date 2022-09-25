@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -c
+    kompose.version: 1.21.0 (992df58d8)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: database-worker
+  name: database-worker
+spec:
+  replicas: {{ .Values.databaseWorkerReplicas }}
+  selector:
+    matchLabels:
+      io.kompose.service: database-worker
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -c
+        kompose.version: 1.21.0 (992df58d8)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: database-worker
+    spec:
+      containers:
+        - args:
+          - celery
+          - worker
+          - --app=database_worker.app
+          - --queues=database
+          - --beat
+          - -E
+          - -s=/tmp/celerybeat-schedule
+          env:
+            - name: CELERY_BROKER_URL
+              value: "amqp://{{ .Values.rabbitmq.auth.username }}:{{ .Values.rabbitmq.auth.password }}@{{ .Release.Name }}-rabbitmq:{{ .Values.rabbitmq.service.port }}"
+            - name: CELERY_RESULT_BACKEND
+              value: {{ .Values.celery_result_backend }}
+            - name:  MONGODB_HOST
+              value: {{ .Values.mongodb_host }}
+            - name: MONGODB_PORT
+              value: "{{ .Values.mongodb_port }}"
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: {{ .Values.mongodb.auth.username }}
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: {{ .Values.mongodb.auth.password }}
+            - name: MONGO_INITDB_DATABASE
+              value: {{ .Values.mongodb.auth.database }}
+          image: weropanika/app-lsdp2
+          name: database-worker
+          resources: {}
+      restartPolicy: Always
+status: {}

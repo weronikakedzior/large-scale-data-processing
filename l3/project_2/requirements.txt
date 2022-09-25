@@ -1,0 +1,7 @@
+pymagnitude
+numpy
+pymongo
+celery==4.3.1
+praw
+pandas
+influxdb

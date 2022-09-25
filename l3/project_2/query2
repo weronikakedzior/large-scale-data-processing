@@ -1,0 +1,10 @@
+{
+    "collection": "post-collection",
+    "aggregate": [{
+        "$unwind": "$subreddit_name"
+    }, {
+        "$group": {
+            "_id": "$subreddit_name"
+        }
+    }]
+}

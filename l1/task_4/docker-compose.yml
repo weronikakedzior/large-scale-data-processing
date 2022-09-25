@@ -1,0 +1,35 @@
+version: "3"
+services:
+  web:
+    build: ./Docker1
+    image: web
+    container_name: web
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 50M
+        reservations:
+          cpus: '0.25'
+          memory: 20M
+    ports:
+    - "80:80"
+    restart: on-failure
+  curl:
+    build: ./Docker2
+    image: curl
+    container_name: curl
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 50M
+        reservations:
+          cpus: '0.25'
+          memory: 20M
+    ports:
+    - "8080:8080"
+    links:
+    - "web"
+    restart: on-failure
+

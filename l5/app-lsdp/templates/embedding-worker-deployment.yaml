@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -c
+    kompose.version: 1.21.0 (992df58d8)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: embedding-worker
+  name: embedding-worker
+spec:
+  replicas: {{ .Values.embeddingsWorkerReplicas }}
+  selector:
+    matchLabels:
+      io.kompose.service: embedding-worker
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -c
+        kompose.version: 1.21.0 (992df58d8)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: embedding-worker
+    spec:
+      containers:
+        - args:
+          - celery
+          - worker
+          - --app=embedding_worker.app
+          - --queues=embedding
+          - --beat
+          - -E
+          - -s=/tmp/celerybeat-schedule
+          env:
+          - name: CELERY_BROKER_URL
+            value: "amqp://{{ .Values.rabbitmq.auth.username }}:{{ .Values.rabbitmq.auth.password }}@{{ .Release.Name }}-rabbitmq:{{ .Values.rabbitmq.service.port }}"
+          - name: CELERY_RESULT_BACKEND
+            value: rpc
+          image: weropanika/app-lsdp2
+          name: embedding-worker
+          resources: {}
+      restartPolicy: Always
+status: {}

@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -c
+    kompose.version: 1.21.0 (992df58d8)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: app-scheduler
+  name: app-scheduler
+spec:
+  replicas: {{ .Values.appSchedulerReplicas }}
+  selector:
+    matchLabels:
+      io.kompose.service: app-scheduler
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -c
+        kompose.version: 1.21.0 (992df58d8)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: app-scheduler
+    spec:
+      containers:
+        - args:
+          - celery
+          - worker
+          - --app=worker.app
+          - --queues=embedding
+          - --beat
+          - -E
+          - -s=/tmp/celerybeat-schedule
+          env:
+          - name: CELERY_BROKER_URL
+            value: "amqp://{{ .Values.rabbitmq.auth.username }}:{{ .Values.rabbitmq.auth.password }}@{{ .Release.Name }}-rabbitmq:{{ .Values.rabbitmq.service.port }}"
+          - name: CELERY_RESULT_BACKEND
+            value: rpc
+          - name: INFLUXDB_HOST
+            value: "{{ .Release.Name }}{{ .Values.influxdb_host }}"
+          - name: INFLUXDB_PORT
+            value: "{{ .Values.influxdb_port }}"
+          - name: INFLUXDB_USERNAME
+            value: "{{ .Values.influxdb.adminUser.name }}"
+          - name: INFLUXDB_PASS
+            value: "{{ .Values.influxdb.adminUser.pwd }}"
+          image: weropanika/app-lsdp2
+          name: app-scheduler
+          resources: {}
+      restartPolicy: Always
+status: {}
