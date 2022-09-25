@@ -1,0 +1,45 @@
+version: '3.4'
+services:
+  app_flask:
+    build: ./app_flask_spark
+    ports:
+      - 56733:8080
+    volumes:
+      - ./app_flask_spark/app:/app
+    command: [spark-submit, app.py]
+  streamlit:
+    build: ./app_streamlit
+    command: "streamlit run front.py"
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./app_streamlit:/usr/src/app
+    links:
+      - app_flask
+#  models_app:
+#    build: ./models_app
+#    command: [spark-submit, --packages, 'org.mongodb.spark:mongo-spark-connector_2.12:3.0.0', sample.py]
+#    environment:
+#      MONGO_URI: mongodb://user:passwd@mongodb:27017/
+#      MONGO_DB: reddit_database
+#      MONGO_COLLECTION: post-collection
+#    ports:
+#      - 4040:4040
+#    volumes:
+#      - ./models_app:/app
+      #- ./models_app/models:/app/models
+#  mongodb:
+#    image: mongo:latest
+#    container_name: mongodb
+#    restart: always
+#    environment:
+#      MONGO_INITDB_ROOT_USERNAME: user
+#      MONGO_INITDB_ROOT_PASSWORD: passwd
+#      MONGO_INITDB_DATABASE: reddit_database
+#    ports:
+#      - 27017:27017
+#    volumes:
+#      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
+
+
